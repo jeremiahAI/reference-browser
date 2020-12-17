@@ -25,7 +25,9 @@ import org.mozilla.reference.browser.addons.WebExtensionActionPopupActivity
 import org.mozilla.reference.browser.browser.BrowserFragment
 import org.mozilla.reference.browser.browser.CrashIntegration
 import org.mozilla.reference.browser.ext.components
+import org.mozilla.reference.browser.ext.initializationDone
 import org.mozilla.reference.browser.ext.isCrashReportActive
+import org.mozilla.thirdparty.com.google.android.exoplayer2.util.TraceUtil
 
 /**
  * Activity that holds the [BrowserFragment].
@@ -45,29 +47,39 @@ open class BrowserActivity : AppCompatActivity() {
      * Returns a new instance of [BrowserFragment] to display.
      */
     open fun createBrowserFragment(sessionId: String?): Fragment =
-        BrowserFragment.create(sessionId)
+            BrowserFragment.create(sessionId)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.browser_stub_layout)
 
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction().apply {
-                replace(R.id.container, createBrowserFragment(sessionId))
-                commit()
-            }
-        }
-
-        if (isCrashReportActive) {
-            crashIntegration = CrashIntegration(this, components.analytics.crashReporter) { crash ->
-                onNonFatalCrash(crash)
-            }
-            lifecycle.addObserver(crashIntegration)
-        }
-
-        NotificationManager.checkAndNotifyPolicy(this)
-        lifecycle.addObserver(webExtensionPopupFeature)
+        setupDeferredInitialization(savedInstanceState)
     }
+
+    private fun setupDeferredInitialization(savedInstanceState: Bundle?) {
+        // Todo: improve user experience by deferring only components that depend on the core engine and showing others
+        initializationDone.observe(this) { isDone ->
+            if (isDone) {
+                if (savedInstanceState == null) {
+                    supportFragmentManager.beginTransaction().apply {
+                        replace(R.id.container, createBrowserFragment(sessionId))
+                        commit()
+                    }
+                }
+
+                if (isCrashReportActive) {
+                    crashIntegration = CrashIntegration(this, components.analytics.crashReporter) { crash ->
+                        onNonFatalCrash(crash)
+                    }
+                    lifecycle.addObserver(crashIntegration)
+                }
+
+                NotificationManager.checkAndNotifyPolicy(this)
+                lifecycle.addObserver(webExtensionPopupFeature)
+            }
+        }
+    }
+
 
     override fun onBackPressed() {
         supportFragmentManager.fragments.forEach {
@@ -115,16 +127,16 @@ open class BrowserActivity : AppCompatActivity() {
     }
 
     override fun onCreateView(parent: View?, name: String, context: Context, attrs: AttributeSet): View? =
-        when (name) {
-            EngineView::class.java.name -> components.core.engine.createView(context, attrs).asView()
-            else -> super.onCreateView(parent, name, context, attrs)
-        }
+            when (name) {
+                EngineView::class.java.name -> components.core.engine.createView(context, attrs).asView()
+                else -> super.onCreateView(parent, name, context, attrs)
+            }
 
     private fun onNonFatalCrash(crash: Crash) {
         Snackbar.make(findViewById(android.R.id.content), R.string.crash_report_non_fatal_message, LENGTH_LONG)
-            .setAction(R.string.crash_report_non_fatal_action) {
-                crashIntegration.sendCrashReport(crash)
-            }.show()
+                .setAction(R.string.crash_report_non_fatal_action) {
+                    crashIntegration.sendCrashReport(crash)
+                }.show()
     }
 
     private fun openPopup(webExtensionState: WebExtensionState) {

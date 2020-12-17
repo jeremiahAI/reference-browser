@@ -5,6 +5,13 @@
 package org.mozilla.reference.browser
 
 import android.app.Application
+import android.os.Handler
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.concept.push.PushProcessor
@@ -20,11 +27,15 @@ import mozilla.components.support.webextensions.WebExtensionSupport
 import org.mozilla.reference.browser.ext.isCrashReportActive
 import org.mozilla.reference.browser.push.PushFxaIntegration
 import org.mozilla.reference.browser.push.WebPushEngineIntegration
+import org.mozilla.thirdparty.com.google.android.exoplayer2.util.TraceUtil
 
 open class BrowserApplication : Application() {
     val components by lazy { Components(this) }
 
+    val initializationDone = MutableLiveData(false)
+
     override fun onCreate() {
+        TraceUtil.beginSection("App on create")
         super.onCreate()
 
         setupCrashReporting(this)
@@ -40,27 +51,40 @@ open class BrowserApplication : Application() {
             return
         }
 
+//        CoroutineScope(Dispatchers.Main).launch {
+//        }
+        Handler().postDelayed({
+            setUp()
+            initializationDone.value = true
+        },100)
+
+        TraceUtil.endSection()
+    }
+
+    private fun setUp() {
+
         components.core.engine.warmUp()
+
         GlobalAddonDependencyProvider.initialize(
                 components.core.addonManager,
                 components.core.addonUpdater
         )
         WebExtensionSupport.initialize(
-            runtime = components.core.engine,
-            store = components.core.store,
-            onNewTabOverride = { _, engineSession, url ->
-                val session = Session(url)
-                components.core.sessionManager.add(session, true, engineSession)
-                session.id
-            },
-            onCloseTabOverride = { _, sessionId ->
-                components.useCases.tabsUseCases.removeTab(sessionId)
-            },
-            onSelectTabOverride = { _, sessionId ->
-                val selected = components.core.sessionManager.findSessionById(sessionId)
-                selected?.let { components.useCases.tabsUseCases.selectTab(it) }
-            },
-            onUpdatePermissionRequest = components.core.addonUpdater::onUpdatePermissionRequest
+                runtime = components.core.engine,
+                store = components.core.store,
+                onNewTabOverride = { _, engineSession, url ->
+                    val session = Session(url)
+                    components.core.sessionManager.add(session, true, engineSession)
+                    session.id
+                },
+                onCloseTabOverride = { _, sessionId ->
+                    components.useCases.tabsUseCases.removeTab(sessionId)
+                },
+                onSelectTabOverride = { _, sessionId ->
+                    val selected = components.core.sessionManager.findSessionById(sessionId)
+                    selected?.let { components.useCases.tabsUseCases.selectTab(it) }
+                },
+                onUpdatePermissionRequest = components.core.addonUpdater::onUpdatePermissionRequest
         )
 
         components.analytics.initializeGlean()

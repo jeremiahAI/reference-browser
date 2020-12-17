@@ -7,6 +7,10 @@ package org.mozilla.reference.browser.components
 import android.content.Context
 import android.content.SharedPreferences
 import android.preference.PreferenceManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
@@ -114,15 +118,15 @@ class Core(private val context: Context) {
             sessionStorage.restore()?.let { snapshot -> restore(snapshot) }
 
             sessionStorage.autoSave(store)
-                .periodicallyInForeground(interval = 30, unit = TimeUnit.SECONDS)
-                .whenGoingToBackground()
-                .whenSessionsChange()
+                    .periodicallyInForeground(interval = 30, unit = TimeUnit.SECONDS)
+                    .whenGoingToBackground()
+                    .whenSessionsChange()
 
             // Install the "icons" WebExtension to automatically load icons for every visited website.
             icons.install(engine, store)
 
             WebNotificationFeature(context, engine, icons, R.drawable.ic_notification,
-                sitePermissionsStorage, BrowserActivity::class.java)
+                    sitePermissionsStorage, BrowserActivity::class.java)
 
             MediaSessionFeature(context, MediaSessionService::class.java, store).start()
         }
@@ -183,19 +187,19 @@ class Core(private val context: Context) {
 
     private fun provideDefaultAddonCollectionProvider(): AddonCollectionProvider {
         return AddonCollectionProvider(
-            context = context,
-            client = client,
-            collectionName = "7dfae8669acc4312a65e8ba5553036",
-            maxCacheAgeInMinutes = DAY_IN_MINUTES
+                context = context,
+                client = client,
+                collectionName = "7dfae8669acc4312a65e8ba5553036",
+                maxCacheAgeInMinutes = DAY_IN_MINUTES
         )
     }
 
     private fun provideCustomAddonCollectionProvider(): AddonCollectionProvider {
         return AddonCollectionProvider(
-            context,
-            client,
-            collectionUser = Settings.getOverrideAmoUser(context),
-            collectionName = Settings.getOverrideAmoCollection(context)
+                context,
+                client,
+                collectionUser = Settings.getOverrideAmoUser(context),
+                collectionName = Settings.getOverrideAmoCollection(context)
         )
     }
 
@@ -211,9 +215,9 @@ class Core(private val context: Context) {
      * @return the constructed tracking protection policy based on preferences.
      */
     fun createTrackingProtectionPolicy(
-        prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context),
-        normalMode: Boolean = prefs.getBoolean(context.getPreferenceKey(pref_key_tracking_protection_normal), true),
-        privateMode: Boolean = prefs.getBoolean(context.getPreferenceKey(pref_key_tracking_protection_private), true)
+            prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context),
+            normalMode: Boolean = prefs.getBoolean(context.getPreferenceKey(pref_key_tracking_protection_normal), true),
+            privateMode: Boolean = prefs.getBoolean(context.getPreferenceKey(pref_key_tracking_protection_private), true)
     ): TrackingProtectionPolicy {
 
         val trackingPolicy = TrackingProtectionPolicy.recommended()

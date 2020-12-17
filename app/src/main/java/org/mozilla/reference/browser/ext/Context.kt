@@ -30,6 +30,12 @@ val Context.application: BrowserApplication
 val Context.components: Components
     get() = application.components
 
+/**
+ * Get the requireComponents of this application.
+ */
+val Context.initializationDone
+    get() = application.initializationDone
+
 fun Context.getPreferenceKey(@StringRes resourceId: Int): String =
     resources.getString(resourceId)
 
