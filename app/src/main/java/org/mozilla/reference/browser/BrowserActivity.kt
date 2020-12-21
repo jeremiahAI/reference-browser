@@ -10,9 +10,11 @@ import android.os.Bundle
 import android.util.AttributeSet
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+import kotlinx.android.synthetic.main.browser_stub_layout.*
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.state.state.WebExtensionState
 import mozilla.components.concept.engine.EngineView
@@ -60,6 +62,7 @@ open class BrowserActivity : AppCompatActivity() {
         // Todo: improve user experience by deferring only components that depend on the core engine and showing others
         initializationDone.observe(this) { isDone ->
             if (isDone) {
+                loading.isVisible = false
                 if (savedInstanceState == null) {
                     supportFragmentManager.beginTransaction().apply {
                         replace(R.id.container, createBrowserFragment(sessionId))
