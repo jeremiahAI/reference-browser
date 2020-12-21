@@ -51,8 +51,6 @@ open class BrowserApplication : Application() {
             return
         }
 
-//        CoroutineScope(Dispatchers.Main).launch {
-//        }
         Handler().postDelayed({
             setUp()
             initializationDone.value = true

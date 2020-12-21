@@ -59,7 +59,6 @@ open class BrowserActivity : AppCompatActivity() {
     }
 
     private fun setupDeferredInitialization(savedInstanceState: Bundle?) {
-        // Todo: improve user experience by deferring only components that depend on the core engine and showing others
         initializationDone.observe(this) { isDone ->
             if (isDone) {
                 loading.isVisible = false
